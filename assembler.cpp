@@ -21,7 +21,8 @@ int main(int argc, char** argv) {
     }
 
     /* Setup */
-    int header_size = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
+    int header_size = sizeof(Elf32_Ehdr) + (sizeof(Elf32_Phdr) * 2);
+    int code_start = 0x08048000;
     
     /* ELF Header */
     Elf32_Ehdr ehdr = {0};
@@ -34,41 +35,59 @@ int main(int argc, char** argv) {
     ehdr.e_type = ET_EXEC;
     ehdr.e_machine = EM_386;
     ehdr.e_version = EV_CURRENT;
-    ehdr.e_entry = 0x08048000 + header_size; // where the program starts
+    ehdr.e_entry = code_start + header_size; // where the program starts
     ehdr.e_phoff = sizeof(Elf32_Ehdr); // position where program header starts
     ehdr.e_ehsize = sizeof(Elf32_Ehdr); // size of the elf header
     ehdr.e_phentsize = sizeof(Elf32_Phdr); // size of each entry in the program header table
-    ehdr.e_phnum = 1; // number of entries in the program header table
+    ehdr.e_phnum = 2; // number of entries in the program header table
     
-    /* Program Header */
-    Elf32_Phdr phdr = {0};
-    phdr.p_type = PT_LOAD; // loads it into memory
-    phdr.p_offset = 0; // @todo: change this to get rid of the elf header. Then offset everything else.
-    phdr.p_vaddr = 0x08048000; // virtual address
-    phdr.p_paddr = 0x08048000; // physical address * unused
-    phdr.p_filesz = 0x1000; // size of the segment in the file
-    phdr.p_memsz = 0x1000; // size of the segment in memory
-    phdr.p_flags = PF_R | PF_X; // read and execute
-    phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
+    /* Text Program Header */
+    Elf32_Phdr text_phdr = {0};
+    text_phdr.p_type = PT_LOAD; // loads it into memory
+    text_phdr.p_offset = 0; // @todo: change this to get rid of the elf header. Then offset everything else.
+    text_phdr.p_vaddr = code_start; // virtual address
+    text_phdr.p_paddr = code_start; // physical address * unused
+    text_phdr.p_filesz = 0x1000; // size of the segment in the file
+    text_phdr.p_memsz = 0x1000; // size of the segment in memory
+    text_phdr.p_flags = PF_R | PF_X; // read and execute
+    text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
+
+    /* Data Program Header */
+    Elf32_Phdr data_phdr = {0};
+    data_phdr.p_type = PT_LOAD; // loads it into memory
+    data_phdr.p_offset = 0x1000;
+    data_phdr.p_vaddr = code_start + 0x1000; // virtual address
+    data_phdr.p_paddr = code_start + 0x1000; // physical address * unused
+    data_phdr.p_filesz = 0x1000; // size of the segment in the file
+    data_phdr.p_memsz = 0x1000; // size of the segment in memory
+    data_phdr.p_flags = PF_R | PF_W; // read and write
+    data_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
     
     /* Machine Code */
     const char code[] =
 	"\xb8\x04\x00\x00\x00" // mov eax, 4 (sys_write)
 	"\xbb\x01\x00\x00\x00" // mov ebx, 1 (stdout)
-	"\xb9\x76\x80\x04\x08" // mov ecx, [str] (starting address of "Hello World\n")
+	"\xb9\x00\x90\x04\x08" // mov ecx, [str] (starting address of "Hello World\n")
 	"\xba\x0e\x00\x00\x00" // mov edx, 14 (legnth of "Hello World\n")
 	"\xcd\x80"             // int 0x80
 	
 	"\xb8\x01\x00\x00\x00" // mov eax, 1 (sys_exit)
 	"\xbb\x00\x00\x00\x00" // mov ebx, 0 (exit status)
-	"\xcd\x80"             // int 0x80
+	"\xcd\x80";            // int 0x80
+    
+    const char data[] =
 	"Hello, World!\n";
 
+    //cout << hex << header_size+code_start+(0x1000-sizeof(code)) << "\n";
+    
     /* Write to the file */
-    file.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr));
-    file.write(reinterpret_cast<const char*>(&phdr), sizeof(phdr));
+    file.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr)); // ELF header
+    file.write(reinterpret_cast<const char*>(&text_phdr), sizeof(text_phdr)); // Text program header
+    file.write(reinterpret_cast<const char*>(&data_phdr), sizeof(data_phdr)); // Data program header
     file.seekp(header_size, ios::beg);
     file.write(code, sizeof(code) - 1);
+    file.seekp(0x1000, ios::beg); // Move to the next page
+    file.write(data, sizeof(data) - 1);
     file.close();
     
     return 0;
