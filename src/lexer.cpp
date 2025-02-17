@@ -36,7 +36,7 @@ void lex(ifstream& file) {
 
 	// Go through the line
 	for (char c : line) {
-	    c = tolower(c); // Make case insensitive
+	    c = tolower(c); // @maybe_todo: case sensitive words need to be printed for errors.
 	    if (line_over) break;
 	    col_num++;
 

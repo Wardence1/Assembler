@@ -1,3 +1,7 @@
+/*
+ * This is a test file and has nothing to do with the actual assembler
+*/
+
 #include <iostream>
 #include <elf.h>
 #include <fstream>
@@ -47,8 +51,8 @@ int main(int argc, char** argv) {
     text_phdr.p_offset = 0; // @todo: change this to get rid of the elf header. Then offset everything else.
     text_phdr.p_vaddr = code_start; // virtual address
     text_phdr.p_paddr = code_start; // physical address * unused
-    text_phdr.p_filesz = 0x1000; // size of the segment in the file
-    text_phdr.p_memsz = 0x1000; // size of the segment in memory
+    text_phdr.p_filesz = 0x5; // size of the segment in the file
+    text_phdr.p_memsz = 0x5; // size of the segment in memory
     text_phdr.p_flags = PF_R | PF_X; // read and execute
     text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
 
@@ -58,27 +62,30 @@ int main(int argc, char** argv) {
     data_phdr.p_offset = 0x1000;
     data_phdr.p_vaddr = code_start + 0x1000; // virtual address
     data_phdr.p_paddr = code_start + 0x1000; // physical address * unused
-    data_phdr.p_filesz = 0x1000; // size of the segment in the file
-    data_phdr.p_memsz = 0x1000; // size of the segment in memory
-    data_phdr.p_flags = PF_R | PF_W; // read and write
+    data_phdr.p_filesz = 0xc; // size of the segment in the file
+    data_phdr.p_memsz = 0xc; // size of the segment in memory
+    data_phdr.p_flags = PF_R | PF_W; // read and write @todo: allows execution within the sector???
     data_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
     
     /* Machine Code */
     const char code[] =
-	"\xb8\x04\x00\x00\x00" // mov eax, 4 (sys_write)
-	"\xbb\x01\x00\x00\x00" // mov ebx, 1 (stdout)
-	"\xb9\x00\x90\x04\x08" // mov ecx, [str] (starting address of "Hello World\n")
-	"\xba\x0e\x00\x00\x00" // mov edx, 14 (legnth of "Hello World\n")
-	"\xcd\x80"             // int 0x80
-	
-	"\xb8\x01\x00\x00\x00" // mov eax, 1 (sys_exit)
-	"\xbb\x00\x00\x00\x00" // mov ebx, 0 (exit status)
-	"\xcd\x80";            // int 0x80
+	"\xe9\x87\x0f\x00\x00"; // jmp to data segment
+
+    /*
+      "\xb8\x04\x00\x00\x00" // mov eax, 4 (sys_write)
+      "\xbb\x01\x00\x00\x00" // mov ebx, 1 (stdout)
+      "\xb9\x00\x90\x04\x08" // mov ecx, [str] (starting address of "Hello World\n")
+      "\xba\x0e\x00\x00\x00" // mov edx, 14 (legnth of "Hello World\n")
+      "\xcd\x80";             // int 0x80
+    */
+
     
     const char data[] =
-	"Hello, World!\n";
+	"\xb8\x01\x00\x00\x00" // mov eax, 1 (sys_exit)
+	"\xbb\x00\x00\x00\x00" // mov ebx, 0 (exit status)
+	"\xcd\x80";          // int 0x80
 
-    //cout << hex << header_size+code_start+(0x1000-sizeof(code)) << "\n";
+    //"Hello, World!\n";
     
     /* Write to the file */
     file.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr)); // ELF header
