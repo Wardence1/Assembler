@@ -4,6 +4,7 @@
 #include "preprocess.hpp"
 #include <elf.h>
 #include <cstring>
+#include <cstdint>
 
 using namespace std;
 
@@ -44,14 +45,15 @@ void write_code(ofstream& oFile) {
     text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
 
     /* Machine Code */
-    const char code[] =
-	"\xb8\x01\x00\x00\x00" // mov eax, 1
-	"\xbb\x00\x00\x00\x00" // mov ebx, 0
-	"\xcd\x80";            // int 0x80
+    const uint8_t code[] = {
+	0xb8, 0x01, 0x0, 0x0, 0x0,
+	0xbb, 0x00, 0x0, 0x0, 0x0,
+	0xcd, 0x80
+    };
     
     /* Write to the file */
     oFile.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr)); // ELF header
     oFile.write(reinterpret_cast<const char*>(&text_phdr), sizeof(text_phdr)); // Text program header
     oFile.seekp(HEADER_SIZE, ios::beg);
-    oFile.write(code, sizeof(code) - 1);
+    oFile.write(reinterpret_cast<const char*>(code), sizeof(code));
 }
