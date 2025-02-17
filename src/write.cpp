@@ -14,6 +14,37 @@ extern size_t CODE_START;
 extern size_t TEXT_SIZE;
 extern size_t HEADER_SIZE;
 
+// Returns true if the ascii character represents a number
+bool is_char_num(char c) {
+    return c >= '0' && c <= '9';
+}
+
+// Returns true if the str is made up of only numbers
+bool is_str_int(string str) {
+    for (char c : str) {
+	if (!is_char_num(c)) return false;
+    }
+    return true;
+}
+
+// Converts a string to an int. Note: the string being entered must be completely full of numbers.
+size_t str_to_int(string str) {
+    // Error catching
+    if (!is_str_int(str)) {
+	cerr << "In \"str_to_int\" : \"" << str << "\" is not completely full of integers.\n";
+	exit(1);
+    }
+
+    // Convert the string
+    size_t num = 0;
+    for (char c : str) {
+	num *= 10;
+	num += c - '0';
+    }
+
+    return num;
+}
+
 void write_code(ofstream& oFile) {
 
     /* ELF Header */
@@ -44,6 +75,10 @@ void write_code(ofstream& oFile) {
     text_phdr.p_flags = PF_R | PF_X; // read and execute
     text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
 
+    /* Go Through the Tokens */
+    
+    
+    
     /* Machine Code */
     const uint8_t code[] = {
 	0xb8, 0x01, 0x0, 0x0, 0x0,
