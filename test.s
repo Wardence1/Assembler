@@ -2,7 +2,7 @@
 	; return the program
 	mov eax 1; move 1 into eax
 	MOV ebx 0; mov 0 into ebx
-	int 0X80
+	syscall
 
 label:
 	; That... is a label, that's right.

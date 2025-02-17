@@ -46,19 +46,21 @@ size_t str_to_int(string str) {
 }
 
 // Returns an integer based on the register : exits if the register isn't valid
-int get_register(string str) {
+int get_register(Token token) {
     // @todo: add the rest
     /*
      * eax : 1
      * ebx : 2
     */
-    
+
+    string str = token.lexeme;
     if (str == "eax") {
 	return 1;
     } else if (str == "ebx") {
 	return 2;
     }
 
+    cerr << "Error line " << token.line_num << ", col " << token.col_num << " : \"" << str << "\" is an invalid register\n";
     exit(1);
 }
 
@@ -103,8 +105,8 @@ void write_code(ofstream& oFile) {
     text_phdr.p_offset = 0; // @todo: change this to get rid of the elf header. Then offset everything else.
     text_phdr.p_vaddr = CODE_START - HEADER_SIZE; // virtual address
     text_phdr.p_paddr = CODE_START - HEADER_SIZE; // physical address * unused
-    text_phdr.p_filesz = 0x5; // size of the segment in the file
-    text_phdr.p_memsz = 0x5; // size of the segment in memory
+    text_phdr.p_filesz = TEXT_SIZE + HEADER_SIZE; // size of the segment in the file
+    text_phdr.p_memsz = TEXT_SIZE + HEADER_SIZE; // size of the segment in memory
     text_phdr.p_flags = PF_R | PF_X; // read and execute
     text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
 
@@ -118,17 +120,24 @@ void write_code(ofstream& oFile) {
 	string command = line[0].lexeme;
 
 	// Go through each command
-	if (command == "mov") {
-	    // Write the register
+	if (command == "mov") { // MOV : moves a value into a register
+	    // Make sure the line's the right size
+	    if (line.size() < 3) {
+		cerr << "Error: line " << line[0].line_num << " doesn't have the correct amount of arguments for \"MOV\"\n";
+		exit(1);
+	    }
+
+            // Write the register
 	    int reg_num;
-	    if (reg_num = get_register(line[1].lexeme)) {
+	    if (reg_num = get_register(line[1])) {
 		switch (reg_num) {
 		case 1:
 		    oFile.put(0xb8);
 		    break;
 		case 2:
 		    oFile.put(0xbb);
-		    break;		}
+		    break;
+		}
 	    }
 	    // Write the 4 bytes
 	    if (is_str_int(line[2].lexeme)) {
@@ -137,8 +146,9 @@ void write_code(ofstream& oFile) {
 		cerr << "Error : line " << line[2].line_num << ", col " << line[2].col_num << " | \"" << line[2].lexeme << "\" is not a number.\n";
 	    }
 	    
-	} else if (command == "int") {
-	    
+	} else if (command == "syscall") { // SYSCALL : same as "int 0x80", calls a system call based on register values
+	    oFile.put(0xcd);
+	    oFile.put(0x80);
 	} else if (command.back() == ':') { // could be a valid label
 	    
 	} else {
