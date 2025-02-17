@@ -27,7 +27,7 @@ bool is_str_int(string str) {
     return true;
 }
 
-// Converts a string to an int. Note: the string being entered must be completely full of numbers.
+// Converts a string to an int. NOTE: the string being entered must be completely full of numbers.
 size_t str_to_int(string str) {
     // Error catching
     if (!is_str_int(str)) {
@@ -43,6 +43,39 @@ size_t str_to_int(string str) {
     }
 
     return num;
+}
+
+// Returns an integer based on the register : exits if the register isn't valid
+int get_register(string str) {
+    // @todo: add the rest
+    /*
+     * eax : 1
+     * ebx : 2
+    */
+    
+    if (str == "eax") {
+	return 1;
+    } else if (str == "ebx") {
+	return 2;
+    }
+
+    exit(1);
+}
+
+// Writes the 4 bytes from the num into the file. NOTE: this is done in little endian format.
+void write_4_bytes(ofstream& oFile, Token token) {
+
+    size_t num = str_to_int(token.lexeme);
+    
+    if (num > 0xFFFFFFFF) {
+	cerr << "Error line " << token.line_num << ", col " << token.col_num << " : Value of \"" << num << "\" is over 32 bits large.\n";
+	exit(1);
+    }
+
+    oFile.put(num & 0xFF); // lowest byte in num
+    oFile.put((num >> 8) & 0xFF);
+    oFile.put((num >> 16) & 0xFF);
+    oFile.put((num >> 24) & 0xFF); // highest byte in num
 }
 
 void write_code(ofstream& oFile) {
@@ -75,10 +108,46 @@ void write_code(ofstream& oFile) {
     text_phdr.p_flags = PF_R | PF_X; // read and execute
     text_phdr.p_align = 0x1000; // makes sure the segment's aligned with each page
 
+    /* Write the header to the file */
+    oFile.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr)); // ELF header
+    oFile.write(reinterpret_cast<const char*>(&text_phdr), sizeof(text_phdr)); // Text program header
+    oFile.seekp(HEADER_SIZE, ios::beg);
+    
     /* Go Through the Tokens */
+    for (auto line : TOKENS) {
+	string command = line[0].lexeme;
+
+	// Go through each command
+	if (command == "mov") {
+	    // Write the register
+	    int reg_num;
+	    if (reg_num = get_register(line[1].lexeme)) {
+		switch (reg_num) {
+		case 1:
+		    oFile.put(0xb8);
+		    break;
+		case 2:
+		    oFile.put(0xbb);
+		    break;		}
+	    }
+	    // Write the 4 bytes
+	    if (is_str_int(line[2].lexeme)) {
+		write_4_bytes(oFile, line[2]);
+	    } else {
+		cerr << "Error : line " << line[2].line_num << ", col " << line[2].col_num << " | \"" << line[2].lexeme << "\" is not a number.\n";
+	    }
+	    
+	} else if (command == "int") {
+	    
+	} else if (command.back() == ':') { // could be a valid label
+	    
+	} else {
+	    cerr << "Invalid command \"" << command << "\"\n";
+	    exit(1);
+	}
+    }
     
-    
-    
+#if 0
     /* Machine Code */
     const uint8_t code[] = {
 	0xb8, 0x01, 0x0, 0x0, 0x0,
@@ -86,9 +155,6 @@ void write_code(ofstream& oFile) {
 	0xcd, 0x80
     };
     
-    /* Write to the file */
-    oFile.write(reinterpret_cast<const char*>(&ehdr), sizeof(ehdr)); // ELF header
-    oFile.write(reinterpret_cast<const char*>(&text_phdr), sizeof(text_phdr)); // Text program header
-    oFile.seekp(HEADER_SIZE, ios::beg);
     oFile.write(reinterpret_cast<const char*>(code), sizeof(code));
+#endif
 }

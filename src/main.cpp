@@ -47,9 +47,9 @@ int main(int argc, char** argv) {
     }*/
 
     // **DEBUG** Print out all labels
-    for (Label label : LABELS) {
+    /*for (Label label : LABELS) {
 	cout << label.name << " : 0x" << hex << CODE_START + label.mem_pos << "\n";
-    }
+    }*/
 
     iFile.close();
     oFile.close();
