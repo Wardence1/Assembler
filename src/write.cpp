@@ -149,6 +149,8 @@ void write_code(ofstream& oFile) {
 	} else if (command == "syscall") { // SYSCALL : same as "int 0x80", calls a system call based on register values
 	    oFile.put(0xcd);
 	    oFile.put(0x80);
+	} else if (command == "db") { // DB : defines bytes in memory, this can either be a number or a string
+	    
 	} else if (command.back() == ':') { // could be a valid label
 	    
 	} else {
