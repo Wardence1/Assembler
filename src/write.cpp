@@ -47,10 +47,11 @@ size_t str_to_int(string str) {
 
 // Returns an integer based on the register : exits if the register isn't valid
 int get_register(Token token) {
-    // @todo: add the rest
     /*
      * eax : 1
      * ebx : 2
+     * ecx : 3
+     * edx : 4
     */
 
     string str = token.lexeme;
@@ -58,6 +59,10 @@ int get_register(Token token) {
 	return 1;
     } else if (str == "ebx") {
 	return 2;
+    } else if (str == "ecx") {
+	return 3;
+    } else if (str == "edx") {
+	return 4;
     }
 
     cerr << "Error line " << token.line_num << ", col " << token.col_num << " : \"" << str << "\" is an invalid register\n";
@@ -78,6 +83,14 @@ void write_4_bytes(ofstream& oFile, Token token) {
     oFile.put((num >> 8) & 0xFF);
     oFile.put((num >> 16) & 0xFF);
     oFile.put((num >> 24) & 0xFF); // highest byte in num
+}
+
+void write_label(ofstream& oFile, Label label) {
+    size_t num = label.mem_pos + CODE_START;
+    oFile.put(num & 0xFF); // lowest byte in num
+    oFile.put((num >> 8) & 0xFF);
+    oFile.put((num >> 16) & 0xFF);
+    oFile.put((num >> 24) & 0xFF); // highest byte in num    
 }
 
 void write_code(ofstream& oFile) {
@@ -137,13 +150,26 @@ void write_code(ofstream& oFile) {
 		case 2:
 		    oFile.put(0xbb);
 		    break;
+		case 3:
+		    oFile.put(0xb9);
+		    break;
+		case 4:
+		    oFile.put(0xba);
+		    break;
 		}
 	    }
 	    // Write the 4 bytes
 	    if (is_str_int(line[2].lexeme)) {
-		write_4_bytes(oFile, line[2]);
+		write_4_bytes(oFile, line[2]); // Write a constant
 	    } else {
-		cerr << "Error : line " << line[2].line_num << ", col " << line[2].col_num << " | \"" << line[2].lexeme << "\" is not a number.\n";
+		bool found = false;
+		for (Label label : LABELS) {
+		    if (label.name == line[2].lexeme) {
+			write_label(oFile, label);
+			found = true;
+		    }
+		}
+		if (!found) cerr << "Error : line " << line[2].line_num << ", col " << line[2].col_num << " | \"" << line[2].lexeme << "\" is not a number.\n";
 	    }
 	    
 	} else if (command == "syscall") { // SYSCALL : same as "int 0x80", calls a system call based on register values
@@ -153,22 +179,11 @@ void write_code(ofstream& oFile) {
 	    for (char c : line[1].lexeme) {
 		oFile.put(c);
 	    }
-	} else if (command.back() == ':') { // could be a valid label
+	} else if (command.back() == ':') { // is a label
 	    
 	} else {
 	    cerr << "Invalid command \"" << command << "\"\n";
 	    exit(1);
 	}
     }
-    
-#if 0
-    /* Machine Code */
-    const uint8_t code[] = {
-	0xb8, 0x01, 0x0, 0x0, 0x0,
-	0xbb, 0x00, 0x0, 0x0, 0x0,
-	0xcd, 0x80
-    };
-    
-    oFile.write(reinterpret_cast<const char*>(code), sizeof(code));
-#endif
 }
