@@ -15,7 +15,7 @@ extern size_t TEXT_SIZE;
 extern size_t HEADER_SIZE;
 
 
-size_t current_byte = 0; // Keeps track of where the program is currently at for offset calculation
+ssize_t current_byte = 0; // Keeps track of where the program is currently at for offset calculation
 // Put a byte into the file
 void put_byte(ofstream& oFile, uint8_t byte) {
     oFile.put(byte);
@@ -201,7 +201,7 @@ void write_code(ofstream& oFile) {
 	    bool found = false;
 	    for (Label label : LABELS) {
 		if (label.name == line[1].lexeme) {
-		    int32_t offset = (static_cast<int32_t>(label.mem_pos) - static_cast<int32_t>(current_byte)) + 4; // Get the offset between the label and the current point
+		    int32_t offset = static_cast<int32_t>(label.mem_pos) - (static_cast<int32_t>(current_byte)+4); // Get the offset between the label and the current point
 		    current_byte += offset; // Set the current byte based on the offset
 		    oFile.write(reinterpret_cast<char*>(&offset), 4);
 		    found = true;

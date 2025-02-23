@@ -6,3 +6,4 @@ g++ -c src/write.cpp -o build/write.o
 g++ build/main.o build/lexer.o build/preprocess.o build/write.o -o assembler
 
 ./assembler test.s test_exec
+./test_exec
