@@ -94,12 +94,18 @@ void write_token(ofstream& oFile, Token token) {
     put_byte(oFile, (num >> 24) & 0xFF); // highest byte in num
 }
 
+// Write the memory address of a label to the file
 void write_label(ofstream& oFile, Label label) {
-    size_t num = label.mem_pos + CODE_START;
-    put_byte(oFile, num & 0xFF); // lowest byte in num
-    put_byte(oFile, (num >> 8) & 0xFF);
-    put_byte(oFile, (num >> 16) & 0xFF);
-    put_byte(oFile, (num >> 24) & 0xFF); // highest byte in num
+    size_t mem_addr = label.mem_pos + CODE_START;
+    oFile.write(reinterpret_cast<char*>(&mem_addr), 4); // Write memory address
+    current_byte += 4;
+}
+
+// Write the offset between the current bytes and a label to the file
+void write_offset(ofstream& oFile, Label label) {
+    int32_t offset = static_cast<int32_t>(label.mem_pos) - (static_cast<int32_t>(current_byte)+4); // Get the offset between the label and the current point
+    oFile.write(reinterpret_cast<char*>(&offset), 4); // Write the offset
+    current_byte += 4;
 }
 
 void write_code(ofstream& oFile) {
@@ -201,9 +207,7 @@ void write_code(ofstream& oFile) {
 	    bool found = false;
 	    for (Label label : LABELS) {
 		if (label.name == line[1].lexeme) {
-		    int32_t offset = static_cast<int32_t>(label.mem_pos) - (static_cast<int32_t>(current_byte)+4); // Get the offset between the label and the current point
-		    current_byte += offset; // Set the current byte based on the offset
-		    oFile.write(reinterpret_cast<char*>(&offset), 4);
+		    write_offset(oFile, label);
 		    found = true;
 		}
 	    }
