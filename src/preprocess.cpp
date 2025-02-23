@@ -10,6 +10,7 @@ extern vector<Label> LABELS;
 extern vector<vector<Token>> TOKENS;
 extern size_t TEXT_SIZE;
 extern bool is_str_int(string str);
+extern size_t str_to_int(string str);
 
 // Set labels, count data
 void preprocess() {
@@ -28,12 +29,11 @@ void preprocess() {
 	    }
 	    TEXT_SIZE += line[2].lexeme.size(); // size in bytes is based off the size of the string
 	} else if (command == "jmp") {
-            // @todo: accound for big jumps
-	    TEXT_SIZE += 2; // 1 byte for the command, 1 to offset the current memory address
+	    TEXT_SIZE += 5; // 1 byte for the command, 4 to offset the current memory address
 	} else if (command.back() == ':') { // is a label
 	    LABELS.push_back(Label{command.substr(0, command.size()-1), TEXT_SIZE});
 	} else {
-	    cerr << "Error, line " << line[0].line_num << ", col " << line[0].col_num << " | \"" << command << "\" isn't a valid command\n";
+	    cerr << "Error, line " << line[0].line_num << line[0].col_num << " | \"" << command << "\" isn't a valid command\n";
 	    exit(1);
 	}
     }

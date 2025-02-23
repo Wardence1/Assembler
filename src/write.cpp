@@ -195,17 +195,15 @@ void write_code(ofstream& oFile) {
 		exit(1);
 	    }
 
-	    put_byte(oFile, 0xEB);
+	    put_byte(oFile, 0xE9);
 
 	    // Write the offset of the label
 	    bool found = false;
 	    for (Label label : LABELS) {
 		if (label.name == line[1].lexeme) {
-		    ssize_t offset = static_cast<ssize_t>(label.mem_pos) - static_cast<ssize_t>(current_byte); // Get the offset between the label and the current point
-		    // @todo: account for little and big jumps
-		    //current_byte += offset; // Set the current byte based on the offset
-		    //oFile.write(reinterpret_cast<char*>(&offset), 4);
-		    put_byte(oFile, 0xF0);
+		    int32_t offset = (static_cast<int32_t>(label.mem_pos) - static_cast<int32_t>(current_byte)) + 4; // Get the offset between the label and the current point
+		    current_byte += offset; // Set the current byte based on the offset
+		    oFile.write(reinterpret_cast<char*>(&offset), 4);
 		    found = true;
 		}
 	    }
