@@ -40,11 +40,11 @@ int main(int argc, char** argv) {
     write_code(oFile);
     
     // **DEBUG** Print out all tokens    
-    for (auto commands : TOKENS) {
+    /*for (auto commands : TOKENS) {
 	for (Token token : commands)
 	    cout << token.lexeme << " ";
 	cout << "\n";
-    }
+	}*/
 
     // **DEBUG** Print out all labels
     /*for (Label label : LABELS) {

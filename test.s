@@ -1,11 +1,13 @@
 
+loop_start:
 ; Print "Hello, World!\n"
 mov edx 14
 mov ecx string
 mov ebx 1
 mov eax 4
-syscall	
-	
+syscall
+jmp loop_start
+
 ; return the program
 mov eax 1; move 1 into eax
 MOV ebx 0; mov 0 into ebx

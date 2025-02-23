@@ -28,7 +28,8 @@ void preprocess() {
 	    }
 	    TEXT_SIZE += line[2].lexeme.size(); // size in bytes is based off the size of the string
 	} else if (command == "jmp") {
-	    TEXT_SIZE += 5; // 1 byte for the command, 4 to offset the current memory address
+            // @todo: accound for big jumps
+	    TEXT_SIZE += 2; // 1 byte for the command, 1 to offset the current memory address
 	} else if (command.back() == ':') { // is a label
 	    LABELS.push_back(Label{command.substr(0, command.size()-1), TEXT_SIZE});
 	} else {

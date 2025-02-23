@@ -14,6 +14,14 @@ extern size_t CODE_START;
 extern size_t TEXT_SIZE;
 extern size_t HEADER_SIZE;
 
+
+size_t current_byte = 0; // Keeps track of where the program is currently at for offset calculation
+// Put a byte into the file
+void put_byte(ofstream& oFile, uint8_t byte) {
+    oFile.put(byte);
+    current_byte++;
+}
+
 // Returns true if the ascii character represents a number
 bool is_char_num(char c) {
     return c >= '0' && c <= '9';
@@ -31,7 +39,7 @@ bool is_str_int(string str) {
 size_t str_to_int(string str) {
     // Error catching
     if (!is_str_int(str)) {
-	cerr << "In \"str_to_int\" : \"" << str << "\" is not completely full of integers.\n";
+	cerr << "Error | \"" << str << "\" is not completely full of integers.\n";
 	exit(1);
     }
 
@@ -47,6 +55,7 @@ size_t str_to_int(string str) {
 
 // Returns an integer based on the register : exits if the register isn't valid
 int get_register(Token token) {
+    // @todo: add other registers
     /*
      * eax : 1
      * ebx : 2
@@ -65,12 +74,12 @@ int get_register(Token token) {
 	return 4;
     }
 
-    cerr << "Error line " << token.line_num << ", col " << token.col_num << " : \"" << str << "\" is an invalid register\n";
+    cerr << "Error line " << token.line_num << " : \"" << str << "\" is an invalid register\n";
     exit(1);
 }
 
-// Writes the 4 bytes from the num into the file. NOTE: this is done in little endian format.
-void write_4_bytes(ofstream& oFile, Token token) {
+// Writes the 4 bytes from the token into the file. NOTE: this is done in little endian format.
+void write_token(ofstream& oFile, Token token) {
 
     size_t num = str_to_int(token.lexeme);
     
@@ -79,18 +88,18 @@ void write_4_bytes(ofstream& oFile, Token token) {
 	exit(1);
     }
 
-    oFile.put(num & 0xFF); // lowest byte in num
-    oFile.put((num >> 8) & 0xFF);
-    oFile.put((num >> 16) & 0xFF);
-    oFile.put((num >> 24) & 0xFF); // highest byte in num
+    put_byte(oFile, num & 0xFF); // lowest byte in num
+    put_byte(oFile, (num >> 8) & 0xFF);
+    put_byte(oFile, (num >> 16) & 0xFF);
+    put_byte(oFile, (num >> 24) & 0xFF); // highest byte in num
 }
 
 void write_label(ofstream& oFile, Label label) {
     size_t num = label.mem_pos + CODE_START;
-    oFile.put(num & 0xFF); // lowest byte in num
-    oFile.put((num >> 8) & 0xFF);
-    oFile.put((num >> 16) & 0xFF);
-    oFile.put((num >> 24) & 0xFF); // highest byte in num    
+    put_byte(oFile, num & 0xFF); // lowest byte in num
+    put_byte(oFile, (num >> 8) & 0xFF);
+    put_byte(oFile, (num >> 16) & 0xFF);
+    put_byte(oFile, (num >> 24) & 0xFF); // highest byte in num
 }
 
 void write_code(ofstream& oFile) {
@@ -145,22 +154,22 @@ void write_code(ofstream& oFile) {
 	    if (reg_num = get_register(line[1])) {
 		switch (reg_num) {
 		case 1:
-		    oFile.put(0xb8);
+		    put_byte(oFile, 0xb8);
 		    break;
 		case 2:
-		    oFile.put(0xbb);
+		    put_byte(oFile, 0xbb);
 		    break;
 		case 3:
-		    oFile.put(0xb9);
+		    put_byte(oFile, 0xb9);
 		    break;
 		case 4:
-		    oFile.put(0xba);
+		    put_byte(oFile, 0xba);
 		    break;
 		}
 	    }
 	    // Write the 4 bytes
 	    if (is_str_int(line[2].lexeme)) {
-		write_4_bytes(oFile, line[2]); // Write a constant
+		write_token(oFile, line[2]); // Write a constant
 	    } else {
 		bool found = false;
 		for (Label label : LABELS) {
@@ -169,16 +178,39 @@ void write_code(ofstream& oFile) {
 			found = true;
 		    }
 		}
-		if (!found) cerr << "Error : line " << line[2].line_num << ", col " << line[2].col_num << " | \"" << line[2].lexeme << "\" is not a number.\n";
+		if (!found) cerr << "Error : line " << line[2].line_num << " | \"" << line[2].lexeme << "\" is not a number or label.\n";
 	    }
 	    
 	} else if (command == "syscall") { // SYSCALL : same as "int 0x80", calls a system call based on register values
-	    oFile.put(0xcd);
-	    oFile.put(0x80);
+	    put_byte(oFile, 0xcd);
+	    put_byte(oFile, 0x80);
 	} else if (command == "ds") { // DS : defines a string in memory
 	    for (char c : line[1].lexeme) {
-		oFile.put(c);
+		put_byte(oFile, c);
 	    }
+	} else if (command == "jmp") { // JMP : jumps to the specified label
+	    // Make sure the line's the right size
+	    if (line.size() < 2) {
+		cerr << "Error: line " << line[0].line_num << " doesn't have the correct amount of arguments for \"JMP\"\n";
+		exit(1);
+	    }
+
+	    put_byte(oFile, 0xEB);
+
+	    // Write the offset of the label
+	    bool found = false;
+	    for (Label label : LABELS) {
+		if (label.name == line[1].lexeme) {
+		    ssize_t offset = static_cast<ssize_t>(label.mem_pos) - static_cast<ssize_t>(current_byte); // Get the offset between the label and the current point
+		    // @todo: account for little and big jumps
+		    //current_byte += offset; // Set the current byte based on the offset
+		    //oFile.write(reinterpret_cast<char*>(&offset), 4);
+		    put_byte(oFile, 0xF0);
+		    found = true;
+		}
+	    }
+	    if (!found) cerr << "Error : line " << line[0].line_num << " | \"" << line[1].lexeme << "\" is not a label.\n";
+
 	} else if (command.back() == ':') { // is a label
 	    
 	} else {
